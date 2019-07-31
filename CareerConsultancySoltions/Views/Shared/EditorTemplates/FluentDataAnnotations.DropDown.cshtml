@@ -1,0 +1,81 @@
+﻿@using System.Web.Mvc
+@using System.Web.Mvc.Html
+@using System.Web.Routing
+@using FluentDataAnnotations
+@using FluentDataAnnotations.Helpers.HtmlHelpers
+@if (!ViewData.ModelMetadata.ShowForEdit)
+{
+    return;
+}
+
+@if (ViewData.ModelMetadata.IsReadOnly && !ViewData.ModelMetadata.AdditionalValues.ContainsKey(Utilities.DisplayAsDisabledInputKey))
+{
+    @Html.Encode(ViewData.TemplateInfo.FormattedModelValue)
+    @Html.Hidden(string.Empty, ViewData.ModelMetadata.Model)
+    return;
+}
+@{
+    RouteValueDictionary props = HtmlHelper.AnonymousObjectToHtmlAttributes(ViewData["htmlAttributes"]);
+    if (ViewData.ModelMetadata.IsReadOnly)
+    {
+        props["disabled"] = "disabled";
+        @Html.Hidden(string.Empty, ViewData.TemplateInfo.FormattedModelValue)
+    }
+
+    string ddKey = ViewData.ModelMetadata.PropertyName + Utilities.DropDownPropertiesKey;
+    string cascadeKey = ViewData.ModelMetadata.PropertyName + Utilities.CascadeDropDownPropertiesKey;
+
+    if (ViewData.ModelMetadata.AdditionalValues.ContainsKey(ddKey))
+    {
+        var ddProps = ViewData.ModelMetadata.AdditionalValues[ddKey] as DropDownProperties;
+
+        if (ddProps != null)
+        {
+            if (ddProps.IsMultiSelect || props.ContainsKey("multiple"))
+            {
+                if (props.ContainsKey("multiple"))
+                {
+                    props.Remove("multiple");
+                }
+                if (Model != null)
+                {
+                    @Html.SmartListBoxFor(model => model, ddProps.SelectList, props)
+                }
+                else
+                {
+                    @Html.SmartListBox(string.Empty, ddProps.SelectList, props)
+                }
+
+            }
+            else
+            {
+                if (Model != null)
+                {
+                    @Html.SmartDropDownListFor(model => model, ddProps.SelectList, ddProps.OptionLabel, props)
+                }
+                else
+                {
+                    @Html.SmartDropDownList(string.Empty, ddProps.SelectList, ddProps.OptionLabel, props)
+                }
+            }
+            return;
+        }
+    }
+
+    if (ViewData.ModelMetadata.AdditionalValues.ContainsKey(cascadeKey))
+    {
+        var cddProps = ViewData.ModelMetadata.AdditionalValues[cascadeKey] as CascadeDropDownProperties;
+        if (cddProps != null)
+        {
+            var propId = Html.ViewData.TemplateInfo.GetFullHtmlFieldId(string.Empty);
+            string triggeredById = cddProps.TriggeredByPropertyId;
+            if (Html.ViewData.TemplateInfo.TemplateDepth > 1)
+            {
+                var index = propId.LastIndexOf(ViewData.ModelMetadata.PropertyName);
+                triggeredById = propId.Remove(index) + cddProps.TriggeredByPropertyId;
+            }
+            @Html.CascadingDropDownList(string.Empty, propId, triggeredById, cddProps.Url, cddProps.ActionParam, cddProps.OptionLabel ?? string.Empty, cddProps.DisabledWhenParentNotSelected, props)
+        }
+    }
+
+}
